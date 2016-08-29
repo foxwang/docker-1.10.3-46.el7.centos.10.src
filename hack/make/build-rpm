@@ -5,7 +5,9 @@ set -e
 (
 	export TZ=UTC # make sure our "date" variables are UTC-based
 
-	source "$(dirname "$BASH_SOURCE")/.integration-daemon-start"
+	#source "$(dirname "$BASH_SOURCE")/.integration-daemon-start"
+	DEST="bundles/1.10.3/dynbinary"
+    VERSION=$(cat VERSION)
 
 	# TODO consider using frozen images for the dockercore/builder-rpm tags
 
@@ -50,6 +52,15 @@ set -e
 	rpmDate="$(date +'%a %b %d %Y')"
 
 	# if go-md2man is available, pre-generate the man pages
+	#&& git clone --depth 1 -b v1.0.4 https://github.com/cpuguy83/go-md2man.git "$GOPATH/src/github.com/cpuguy83/go-md2man" \
+	#&& git clone --depth 1 -b v1.4 https://github.com/russross/blackfriday.git "$GOPATH/src/github.com/russross/blackfriday" \
+	#&& go get -v -d github.com/cpuguy83/go-md2man \
+	set -x \
+	&& export GOPATH="$(mktemp -d)" \
+	&& tar -zxvf "$PWD/hack/make/.build-rpm/go-md2man.src.tar.gz" -C "$GOPATH" \
+	&& go build -v -o /usr/local/bin/go-md2man github.com/cpuguy83/go-md2man \
+	&& rm -rf "$GOPATH"
+    chmod +x ./man/md2man-all.sh
 	./man/md2man-all.sh -q || true
 	# TODO decide if it's worth getting go-md2man in _each_ builder environment to avoid this
 
@@ -71,8 +82,12 @@ set -e
 	for dir in contrib/builder/rpm/*/; do
 		version="$(basename "$dir")"
 		suite="${version##*-}"
+		if [ "$version" != "centos-7" ];then
+                   echo "$version not centos7"
+                   continue
+        fi
 
-		image="dockercore/builder-rpm:$version"
+		image="centos7-rpm"
 		if ! docker inspect "$image" &> /dev/null; then
 			( set -x && docker build ${DOCKER_BUILD_ARGS} -t "$image" "$dir" )
 		fi
@@ -92,7 +107,7 @@ set -e
 			RUN ln -sfv /usr/src/${rpmName}/hack/make/.build-rpm SPECS
 			WORKDIR /root/rpmbuild/SPECS
 			RUN tar -cz -C /usr/src -f /root/rpmbuild/SOURCES/${rpmName}.tar.gz ${rpmName}
-			RUN { cat /usr/src/${rpmName}/contrib/builder/rpm/changelog; } >> ${rpmName}.spec && tail >&2 ${rpmName}.spec
+			#RUN { cat /usr/src/${rpmName}/contrib/builder/rpm/changelog; } >> ${rpmName}.spec && tail >&2 ${rpmName}.spec
 			RUN rpmbuild -ba \
 				--define '_gitcommit $DOCKER_GITCOMMIT' \
 				--define '_release $rpmRelease' \
@@ -120,5 +135,5 @@ set -e
 		docker rmi "$tempImage"
 	done
 
-	source "$(dirname "$BASH_SOURCE")/.integration-daemon-stop"
+	#source "$(dirname "$BASH_SOURCE")/.integration-daemon-stop"
 ) 2>&1 | tee -a $DEST/test.log

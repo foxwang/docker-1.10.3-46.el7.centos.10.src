@@ -87,8 +87,8 @@ deb: build
 docs:
 	$(MAKE) -C docs docs
 
-rpm: build
-	$(DOCKER_RUN_DOCKER) hack/make.sh dynbinary build-rpm
+rpm:
+	sh hack/make/build-rpm
 
 shell: build
 	$(DOCKER_RUN_DOCKER) bash

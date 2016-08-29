@@ -12,6 +12,14 @@ ENV GO_VERSION 1.5.3
 RUN curl -fSL "https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz" | tar xzC /usr/local
 ENV PATH $PATH:/usr/local/go/bin
 
+RUN set -x \
+	&& export GOPATH="$(mktemp -d)" \
+	&& git clone --depth 1 -b v1.0.4 https://github.com/cpuguy83/go-md2man.git "$GOPATH/src/github.com/cpuguy83/go-md2man" \
+	&& git clone --depth 1 -b v1.4 https://github.com/russross/blackfriday.git "$GOPATH/src/github.com/russross/blackfriday" \
+	&& go get -v -d github.com/cpuguy83/go-md2man \
+	&& go build -v -o /usr/local/bin/go-md2man github.com/cpuguy83/go-md2man \
+	&& rm -rf "$GOPATH"
+
 ENV AUTO_GOPATH 1
 
 ENV DOCKER_BUILDTAGS selinux
