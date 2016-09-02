@@ -120,6 +120,7 @@ depending on a particular stack or provider.
 
 %build
 export DOCKER_GITCOMMIT=%{_gitcommit}
+chmod +x hack/make.sh
 ./hack/make.sh dynbinary
 # ./man/md2man-all.sh runs outside the build container (if at all), since we don't have go-md2man here
 
